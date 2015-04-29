@@ -8,7 +8,7 @@
 	for
 	Steve Beyer Productions http://stevebeyerproductions.com/
 	
-	20150428
+	20150429
 */
 
 /* Libraries */
@@ -39,16 +39,17 @@ int buttonEffectRead;
 long previousMillis = 0;
 
 int buttonInterval = 3;           // interval at which to check buttons (milliseconds)
-int debounce_count = 30; // number of millis/samples to consider before declaring a debounced input
+int debounce_count = 50; // number of millis/samples to consider before declaring a debounced input
 
 /* Modes **********************************************************************/
 int animationMode = 0;	// 0: static sweepable sparkling color
 			// 1: rainbow
 			// 2: pacman chase
 			// 3: CGA larson scanner
-			// 4: attempt at "plasma" -- circus party
+			// 4: Fire Larson Scanner
+			// 5: attempt at "plasma" -- circus party
 
-int animationModesTotal = 4;	// total effects available
+int animationModesTotal = 5;	// total effects available
 
 /* Color Variables ************************************************************/
 int displayColor = 0; // temp after randomizations
@@ -57,7 +58,7 @@ int brightness = 10;  // 1 low, 10 max // brightness of the lights
 int colorFrameRate = 60;		// milliseconds
 int plasmaFrameRate = 90;		// milliseconds
 int rainbowFrameRate = 3;
-int pacmanFrameRate = 30;
+int pacmanFrameRate = 20;
 int cgaFrameRate = 20;
 
 /* Plasma *********************************************************************/
@@ -76,11 +77,17 @@ int pixelDirection = 0;
 
 /* CGA ************************************************************************/
 int centerPixelT = stripT.numPixels()/2;
-int centerPixelB = stripB.numPixels()/2;
+int centerPixelB = map(centerPixelT,0,stripT.numPixels(),0,stripB.numPixels())+10;
 int pixelPositionBL = centerPixelB;
 int pixelPositionBR = centerPixelB;
 int pixelPositionTL = centerPixelT;
 int pixelPositionTR = centerPixelT;
+
+/* AltCGA ************************************************************************/
+int pixelAltPositionBL = map(stripT.numPixels(),0,stripT.numPixels(),0,stripB.numPixels());
+int pixelAltPositionBR = 0;
+int pixelAltPositionTL = stripT.numPixels();
+int pixelAltPositionTR = 0;
 
 /* ****************************************************************************/
 
@@ -200,6 +207,12 @@ void loop() {
 	}
 
 	if (animationMode == 4) {
+		if ((millis() % cgaFrameRate) == 0) {
+			AltCycle();
+		}
+	}
+
+	if (animationMode == 5) {
 		if ((millis() % plasmaFrameRate) == 0) {
 			PlasmaController();
 			PlasmaStrip();
@@ -288,12 +301,72 @@ void CgaCycle() {
 	}
 }
 
+void AltCycle() {
+	//set base color
+	for (int pixel=0; pixel < stripT.numPixels(); pixel++) {
+		stripT.setPixelColor(pixel,255,0,0);
+	}
+	for (int pixel=0; pixel < stripB.numPixels(); pixel++) {
+		stripB.setPixelColor(pixel,255,0,0);
+	}
+	controller.setPixelColor(0,255,0,0);
+	controller.setPixelColor(1,255,0,0);
+	controller.setPixelColor(2,255,0,0);
+	controller.setPixelColor((pixelPosition % 20) -1,255,128,0);
+	controller.setPixelColor((pixelPosition % 20),255,255,0);
+	// move block forwards
+	stripT.setPixelColor(pixelAltPositionTL,255,128,0);
+	stripT.setPixelColor(pixelAltPositionTL+8,255,255,0);
+	for (int group = 1; group < 8; group++) {
+		stripT.setPixelColor(pixelAltPositionTL+group,255,128,0);
+		stripT.setPixelColor(pixelAltPositionTL-group,255,255,0);
+	}
+	stripB.setPixelColor(map(pixelAltPositionBL,0,stripT.numPixels(),0,stripB.numPixels()),255,128,0);
+	stripB.setPixelColor(map(pixelAltPositionBL,0,stripT.numPixels(),0,stripB.numPixels())+8,255,255,0);
+	for (int group = 1; group < 8; group++) {
+		stripB.setPixelColor(map(pixelAltPositionBL,0,stripT.numPixels(),0,stripB.numPixels())+group,255,128,0);
+		stripB.setPixelColor(map(pixelAltPositionBL,0,stripT.numPixels(),0,stripB.numPixels())-group,255,255,0);
+	}
+	// move block backwards
+	stripT.setPixelColor(pixelAltPositionTR,255,128,0);
+	stripT.setPixelColor(pixelAltPositionTR-8,255,255,0);
+	for (int group = 7; group > 0; group--) {
+		stripT.setPixelColor(pixelAltPositionTR-group,255,128,0);
+		stripT.setPixelColor(pixelAltPositionTR+group,255,128,0);
+	}
+	stripB.setPixelColor(map(pixelAltPositionBR,0,stripT.numPixels(),0,stripB.numPixels()),255,128,0);
+	stripB.setPixelColor(map(pixelAltPositionBR,0,stripT.numPixels(),0,stripB.numPixels())-8,255,255,0);
+	for (int group = 7; group > 0; group--) {
+		stripB.setPixelColor(map(pixelAltPositionBR,0,stripT.numPixels(),0,stripB.numPixels())-group,255,128,0);
+		stripB.setPixelColor(map(pixelAltPositionBR,0,stripT.numPixels(),0,stripB.numPixels())+group,255,128,0);
+	}
+	stripT.show();
+	stripB.show();
+	controller.show();
+	pixelPosition++;
+	pixelAltPositionTL++;
+	pixelAltPositionTR--;
+	pixelAltPositionBL++;
+	pixelAltPositionBR--;
+	if (pixelAltPositionTL > stripT.numPixels()) {
+		pixelAltPositionTL = 0;
+		pixelAltPositionBL = 0;
+	}
+	if (pixelAltPositionTR < 0) {
+		pixelAltPositionTR = stripT.numPixels();
+		pixelAltPositionBR = stripB.numPixels()+14;
+	}
+	if (pixelPosition > 255) {
+		pixelPosition = 0;
+	}
+}
+
 void Pacman() {
 	if (pixelDirection == 0) {
 		controller.setPixelColor(0,0,0,255);
 		controller.setPixelColor(1,0,0,255);
 		controller.setPixelColor(2,255,165,0);
-		for (int pixel=0-8; pixel < stripT.numPixels() +8; pixel++) {
+		for (int pixel=0; pixel < stripT.numPixels(); pixel++) {
 			if (pixel == pixelPosition) {
 				stripT.setPixelColor(pixel,255,255,255);
 				stripB.setPixelColor(map(pixel,0,stripT.numPixels(),0,stripB.numPixels()),255,255,255);
@@ -319,7 +392,7 @@ void Pacman() {
 		controller.setPixelColor(0,255,165,0);
 		controller.setPixelColor(1,0,0,255);
 		controller.setPixelColor(2,0,0,255);
-		for (int pixel=stripT.numPixels() + 8; pixel > 0-8; pixel--) {
+		for (int pixel=stripT.numPixels(); pixel > 0; pixel--) {
 			if (pixel == pixelPosition) {
 				stripT.setPixelColor(pixel,255,255,255);
 				stripB.setPixelColor(map(pixel,0,stripT.numPixels(),0,stripB.numPixels()),255,255,255);
@@ -345,10 +418,10 @@ void Pacman() {
 	stripT.show();
 	stripB.show();
 	controller.show();
-	if (pixelPosition > stripT.numPixels()+8) {
+	if (pixelPosition > stripT.numPixels()) {
 		pixelDirection = 1;
 	}
-	if (pixelPosition < 0-8 && pixelDirection == 1) {
+	if (pixelPosition < 0 && pixelDirection == 1) {
 		pixelDirection = 0;
 	}
 }

@@ -11,8 +11,9 @@ DJ operator selects animation styles from a small controller.
 1. Static color, dialed in by sweeping a potentiometer through the color wheel. Slight sparkling effect.
 2. Rainbow chase.
 3. "Pacman" style with blue background & yellow pixel group running the length of the table.
-4. Purple, Cyan, and White "CGA"-palette inspired Larson Scanner.
-5. Circus Party.
+4. Purple, Cyan, and White "CGA"-palette inspired Larson Scanner starting at center.
+5. Red & Yellow full-width & crossover Larson Scanner
+6. Circus Party.
 
 ## Controller Hardware
 
