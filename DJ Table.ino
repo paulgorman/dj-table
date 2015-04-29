@@ -37,15 +37,17 @@ int counterEffectRead = 0;
 int buttonModeRead;			// the current value read from the input pin
 int buttonEffectRead;
 long previousMillis = 0;
-int buttonInterval = 3;           // interval at which to check buttons (milliseconds)
 
-// the following variable is a long because the time, measured in milliseconds,
-// will quickly become a bigger number than can be stored in an int.
+int buttonInterval = 3;           // interval at which to check buttons (milliseconds)
 int debounce_count = 50; // number of millis/samples to consider before declaring a debounced input
 
 /* Modes **********************************************************************/
-int animationMode = 0;			// 0: static sweepable color
-								// 1: plasma
+int animationMode = 0;	// 0: static sweepable sparkling color
+			// 1: rainbow
+			// 2: pacman chase
+			// 3: CGA larson scanner
+			// 4: attempt at "plasma" -- circus party
+
 int animationModesTotal = 4;	// total effects available
 
 /* Color Variables ************************************************************/

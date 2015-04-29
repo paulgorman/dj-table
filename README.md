@@ -6,7 +6,8 @@ A custom DJ Table designed and built for Steve Beyer Productions, featuring LED 
 
 DJ operator selects animation styles from a small controller.
 
-Modes:
+### Modes:
+
 1. Static color, dialed in by sweeping a potentiometer through the color wheel. Slight sparkling effect.
 2. Rainbow chase.
 3. "Pacman" style with blue background & yellow pixel group running the length of the table.
@@ -44,11 +45,12 @@ Table fabrication based upon 3D model built in Sketch Up Make.
 ## Credits
 
 * Design & Production: Steve Beyer Productions
-* 3D Model: Paul Gorman / @Presence
-* Arduino Code: Paul Gorman, with help from Adafruit tutorials & CodeBender.cc 
+* 3D Model: Paul Gorman, with help from Dream Entertainment in Las Vegas
+* Arduino Code: Paul Gorman, with help from Adafruit.com tutorials & CodeBender.cc web-based IDE
 
 ## License
 
 Beats me. Please contact Steve Beyer Productions.
+http://stevebeyerproductions.com/
 
 
