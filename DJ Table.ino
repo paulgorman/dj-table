@@ -39,7 +39,7 @@ int buttonEffectRead;
 long previousMillis = 0;
 
 int buttonInterval = 3;           // interval at which to check buttons (milliseconds)
-int debounce_count = 50; // number of millis/samples to consider before declaring a debounced input
+int debounce_count = 30; // number of millis/samples to consider before declaring a debounced input
 
 /* Modes **********************************************************************/
 int animationMode = 0;	// 0: static sweepable sparkling color
@@ -248,11 +248,11 @@ void CgaCycle() {
 		stripT.setPixelColor(pixelPositionTL+group,255,255,255);
 		stripT.setPixelColor(pixelPositionTL-group,76,0,153);
 	}
-	stripB.setPixelColor(pixelPositionBL,0,255,255);
-	stripB.setPixelColor(pixelPositionTL+8,0,255,255);
+	stripB.setPixelColor(map(pixelPositionBL,0,stripT.numPixels(),0,stripB.numPixels()),0,255,255);
+	stripB.setPixelColor(map(pixelPositionBL,0,stripT.numPixels(),0,stripB.numPixels())+8,0,255,255);
 	for (int group = 1; group < 8; group++) {
-		stripB.setPixelColor(pixelPositionBL+group,255,255,255);
-		stripB.setPixelColor(pixelPositionBL-group,76,0,153);
+		stripB.setPixelColor(map(pixelPositionBL,0,stripT.numPixels(),0,stripB.numPixels())+group,255,255,255);
+		stripB.setPixelColor(map(pixelPositionBL,0,stripT.numPixels(),0,stripB.numPixels())-group,76,0,153);
 	}
 	// move block backwards
 	stripT.setPixelColor(pixelPositionTR,0,255,255);
@@ -261,11 +261,11 @@ void CgaCycle() {
 		stripT.setPixelColor(pixelPositionTR-group,255,255,255);
 		stripT.setPixelColor(pixelPositionTR+group,76,0,153);
 	}
-	stripB.setPixelColor(pixelPositionBR,0,255,255);
-	stripB.setPixelColor(pixelPositionBR-8,0,255,255);
+	stripB.setPixelColor(map(pixelPositionBR,0,stripT.numPixels(),0,stripB.numPixels()),0,255,255);
+	stripB.setPixelColor(map(pixelPositionBR,0,stripT.numPixels(),0,stripB.numPixels())-8,0,255,255);
 	for (int group = 7; group > 0; group--) {
-		stripB.setPixelColor(pixelPositionBR-group,255,255,255);
-		stripB.setPixelColor(pixelPositionBR+group,76,0,153);
+		stripB.setPixelColor(map(pixelPositionBR,0,stripT.numPixels(),0,stripB.numPixels())-group,255,255,255);
+		stripB.setPixelColor(map(pixelPositionBR,0,stripT.numPixels(),0,stripB.numPixels())+group,76,0,153);
 	}
 	stripT.show();
 	stripB.show();
@@ -277,14 +277,10 @@ void CgaCycle() {
 	pixelPositionBR--;
 	if (pixelPositionTL > stripT.numPixels()) {
 		pixelPositionTL = centerPixelT;
+		pixelPositionBL = centerPixelB;
 	}
 	if (pixelPositionTR < 0) {
 		pixelPositionTR = centerPixelT;
-	}
-	if (pixelPositionBL > stripB.numPixels()) {
-		pixelPositionBL = centerPixelB;
-	}
-	if (pixelPositionBR < 0) {
 		pixelPositionBR = centerPixelB;
 	}
 	if (pixelPosition > 255) {
@@ -297,25 +293,25 @@ void Pacman() {
 		controller.setPixelColor(0,0,0,255);
 		controller.setPixelColor(1,0,0,255);
 		controller.setPixelColor(2,255,165,0);
-		for (int pixel=0; pixel < stripT.numPixels(); pixel++) {
+		for (int pixel=0-8; pixel < stripT.numPixels() +8; pixel++) {
 			if (pixel == pixelPosition) {
 				stripT.setPixelColor(pixel,255,255,255);
-				stripB.setPixelColor(pixel,255,255,255);
+				stripB.setPixelColor(map(pixel,0,stripT.numPixels(),0,stripB.numPixels()),255,255,255);
 			} else if (pixel == pixelPosition + 1 || pixel == pixelPosition -1) {
 				stripT.setPixelColor(pixel,255,255,8);
-				stripB.setPixelColor(pixel,255,255,8);
+				stripB.setPixelColor(map(pixel,0,stripT.numPixels(),0,stripB.numPixels()),255,255,8);
 			} else if (pixel == pixelPosition +2 || pixel == pixelPosition - 2) {
 				stripT.setPixelColor(pixel,165,165,0);
-				stripB.setPixelColor(pixel,165,165,0);
+				stripB.setPixelColor(map(pixel,0,stripT.numPixels(),0,stripB.numPixels()),165,165,0);
 			} else if ( (pixel == pixelPosition + 20) || (pixel == pixelPosition - 20) ) {
 				stripT.setPixelColor(pixel,70,30,180);
-				stripB.setPixelColor(pixel,70,30,180);
+				stripB.setPixelColor(map(pixel,0,stripT.numPixels(),0,stripB.numPixels()),70,30,180);
 			} else if ( (pixel == pixelPosition + 50) || (pixel == pixelPosition - 50) ) {
 				stripT.setPixelColor(pixel,30,144,0);
-				stripB.setPixelColor(pixel,30,144,0);
+				stripB.setPixelColor(map(pixel,0,stripT.numPixels(),0,stripB.numPixels()),30,144,0);
 			} else {
 				stripT.setPixelColor(pixel, 0, 0, 255);
-				stripB.setPixelColor(pixel, 0, 0, 255);
+				stripB.setPixelColor(map(pixel,0,stripT.numPixels(),0,stripB.numPixels()), 0, 0, 255);
 			}
 		}
 		pixelPosition++;
@@ -323,25 +319,25 @@ void Pacman() {
 		controller.setPixelColor(0,255,165,0);
 		controller.setPixelColor(1,0,0,255);
 		controller.setPixelColor(2,0,0,255);
-		for (int pixel=256; pixel > 0; pixel--) {
+		for (int pixel=stripT.numPixels() + 8; pixel > 0-8; pixel--) {
 			if (pixel == pixelPosition) {
 				stripT.setPixelColor(pixel,255,255,255);
-				stripB.setPixelColor(pixel,255,255,255);
+				stripB.setPixelColor(map(pixel,0,stripT.numPixels(),0,stripB.numPixels()),255,255,255);
 			} else if (pixel == pixelPosition + 1 || pixel == pixelPosition -1) {
 				stripT.setPixelColor(pixel,255,255,8);
-				stripB.setPixelColor(pixel,255,255,8);
+				stripB.setPixelColor(map(pixel,0,stripT.numPixels(),0,stripB.numPixels()),255,255,8);
 			} else if (pixel == pixelPosition + 2 || pixel == pixelPosition -2) {
 				stripT.setPixelColor(pixel,165,165,0);
-				stripB.setPixelColor(pixel,165,165,0);
+				stripB.setPixelColor(map(pixel,0,stripT.numPixels(),0,stripB.numPixels()),165,165,0);
 			} else if ( (pixel == pixelPosition + 20) || (pixel == pixelPosition - 20) ) {
 				stripT.setPixelColor(pixel,70,130,180);
-				stripB.setPixelColor(pixel,70,130,180);
+				stripB.setPixelColor(map(pixel,0,stripT.numPixels(),0,stripB.numPixels()),70,130,180);
 			} else if ( (pixel == pixelPosition + 50) || (pixel == pixelPosition - 50) ) {
 				stripT.setPixelColor(pixel,30,144,255);
-				stripB.setPixelColor(pixel,30,144,255);
+				stripB.setPixelColor(map(pixel,0,stripT.numPixels(),0,stripB.numPixels()),30,144,255);
 			} else {
 				stripT.setPixelColor(pixel, 0, 0, 255);
-				stripB.setPixelColor(pixel, 0, 0, 255);
+				stripB.setPixelColor(map(pixel,0,stripT.numPixels(),0,stripB.numPixels()), 0, 0, 255);
 			}
 		}
 		pixelPosition--;
@@ -349,10 +345,10 @@ void Pacman() {
 	stripT.show();
 	stripB.show();
 	controller.show();
-	if (pixelPosition > stripT.numPixels()) {
+	if (pixelPosition > stripT.numPixels()+8) {
 		pixelDirection = 1;
 	}
-	if (pixelPosition < 0 && pixelDirection == 1) {
+	if (pixelPosition < 0-8 && pixelDirection == 1) {
 		pixelDirection = 0;
 	}
 }
@@ -361,22 +357,22 @@ void Pacman() {
 void Sparkle(int color) {
 	for(int pixel=0; pixel < controller.numPixels(); pixel++) {
 		if (random(0,1) == 1) {
-			displayColor = color + random(10);  // color hue sparkles
-			displayFade = brightness * random(60,100) * 0.001; // brightness 
+			displayColor = color + random(5);  // color hue sparkles
+			displayFade = brightness * 100 * 0.001; // brightness 
 		} else {
-			displayColor = color - random(10);
-			displayFade = brightness * random(60,100) * 0.001;
+			displayColor = color - random(5);
+			displayFade = brightness * 100 * 0.001; // static brightness
 		}
 		controller.setPixelColor(pixel, Wheel(displayColor, displayFade));
 		controller.show();
 	}
 	for (int pixel=0; pixel < stripT.numPixels(); pixel++) {
 		if (random(0,1) == 1) {
-			displayColor = color + random(10);  // color hue sparkles
-			displayFade = brightness * random(60,100) * 0.001; // brightness 
+			displayColor = color + random(5);  // color hue sparkles
+			displayFade = brightness * 100 * 0.001; // brightness 
 		} else {
-			displayColor = color - random(10);
-			displayFade = brightness * random(60,100) * 0.001;
+			displayColor = color - random(5);
+			displayFade = brightness * 100 * 0.001; // static brightness
 		}
 		stripT.setPixelColor(pixel, Wheel(displayColor, displayFade));
 		stripB.setPixelColor(pixel, Wheel(displayColor, displayFade));
