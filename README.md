@@ -17,6 +17,8 @@ DJ operator selects animation styles from a small controller.
 
 ## Controller Hardware
 
+(Adafruit.com #part numbers)
+
 1. #1315 Arduino Micro 5V
 2. #903  Enclosure
 3. #761  Cable Gland
@@ -28,6 +30,7 @@ DJ operator selects animation styles from a small controller.
 9. #2047 White Knob
 10. #1504 Green Button
 11. #1505 Black Button
+12. (Amazon) 7.5V 1A Switching Power Supply
 
 ## Lighting Hardware
 
@@ -39,9 +42,11 @@ DJ operator selects animation styles from a small controller.
 
 ## Installation
 
-Install one strip to the upper/outer edge of DJ table facade, other strip to lower/inner edge. Removable controller module attaches via wire plug and power plug. 
+Install one LED strip to the upper/outer edge of DJ table facade, other LED strip to lower/inner edge. Removable controller module attaches via wire plug and center-positive power plug. 
 
-Table fabrication based upon 3D model built in Sketch Up Make.
+Table fabrication based upon 3D model built in Sketch Up Make.  Double-frosted plexiglass.
+
+Three power outlets on one electrical extension strip, ~50 Watts total.
 
 ## Credits
 
