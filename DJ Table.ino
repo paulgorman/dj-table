@@ -1,44 +1,50 @@
 /*
 	DJ Table Illumination Controller
 	Adafruit Neopixels on an Arduino Micro
-	Two pushbuttons for mode control, one potentiometer for color sweep
+	Two pushbuttons for mode control
+	potentiometer for color sweep
+	potentiometer for dimming
 	
 	Design & Code: Presence (Paul Gorman)
 	with Tutorials and Tips from Adafruit.com
 	for
 	Steve Beyer Productions http://stevebeyerproductions.com/
 	
-	20150429
+	20160926
 */
 
 /* Libraries */
 #include <Adafruit_NeoPixel.h>
 
-/* 10k potentiometer on pin 1, connected between 5v and ground ****************/
-int potentiometerPin = 0;
+/* 10k potentiometer on pin A1, connected to Arduino's 5V & ground ************/
+int potentiometerPin = 1;
 int potReadingOld = 0;
+int dimming = 255;  // initial brightness/dimming is set to full brightness 255
 float potSmoothing = 0.1; // smaller value filters variances more
+
+/* 10k potentiometer on pin A0, connected to Arduino's 5V & ground ************/
+int dimmingPin = 0;
+int dimReadingOld = 0;
 
 /* Three through-hole WS2811 Neopixel LEDs on controller box on Pin 5 *********/
 Adafruit_NeoPixel controller = Adafruit_NeoPixel(3, 5, NEO_RGB + NEO_KHZ400);
 
 /* Neopixel WS2812B Top Strip on pin 7 (white**********************************/
-Adafruit_NeoPixel stripT = Adafruit_NeoPixel(104, 7, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel stripT = Adafruit_NeoPixel(200, 7, NEO_GRB + NEO_KHZ800);
 
 /* Neopixel WS2812B Bottom Strip on pin 6 (yellow) ****************************/
-Adafruit_NeoPixel stripB = Adafruit_NeoPixel(84, 6, NEO_GRB + NEO_KHZ800);
-
+Adafruit_NeoPixel stripB = Adafruit_NeoPixel(170, 6, NEO_GRB + NEO_KHZ800);
 
 /* Buttons wired to ground from pins 11 and 12 ********************************/
-int buttonMode = 11;	// Green Button
-int buttonEffect = 12;	// Black Button
-int counterModeRead = 0;		// Debouncing - How many cycles button depressed
+int buttonMode = 11;	// Top Button
+int buttonEffect = 12;	// Bottom Button
+int counterModeRead = 0;	// Debouncing - How many cycles button depressed
 int counterEffectRead = 0;
 int buttonModeRead;			// the current value read from the input pin
 int buttonEffectRead;
 long previousMillis = 0;
 
-int buttonInterval = 3;           // interval at which to check buttons (milliseconds)
+int buttonInterval = 3;  // interval at which to check buttons (milliseconds)
 int debounce_count = 50; // number of millis/samples to consider before declaring a debounced input
 
 /* Modes **********************************************************************/
@@ -47,16 +53,15 @@ int animationMode = 0;	// 0: static sweepable sparkling color
 			// 2: pacman chase
 			// 3: CGA larson scanner
 			// 4: Fire Larson Scanner
-			// 5: attempt at "plasma" -- circus party
+			// 4: attempt at "plasma" -- circus party
 
 int animationModesTotal = 5;	// total effects available
 
 /* Color Variables ************************************************************/
 int displayColor = 0; // temp after randomizations
 float displayFade = 0.00; // temp after randomizations, maybe
-int brightness = 10;  // 1 low, 10 max // brightness of the lights
 int colorFrameRate = 60;		// milliseconds
-int plasmaFrameRate = 90;		// milliseconds
+int plasmaFrameRate = 30;		// milliseconds
 int rainbowFrameRate = 3;
 int pacmanFrameRate = 20;
 int cgaFrameRate = 20;
@@ -67,27 +72,30 @@ struct Point {
   float y;
 };
 float phase = 0.0;
-float phaseIncrement = 0.01;  // Controls the speed of the moving points. Higher == faster. I like 0.08 ..03 change to .02
-float colorStretch = 0.11;    // Higher numbers will produce tighter color bands. I like 0.11 . ok try .11 instead of .03
+float phaseIncrement = 0.01;  // Controls the speed of the moving points. Higher == faster. I like 0.08 0.01
+float colorStretch = 0.03;    // Higher numbers will produce tighter color bands. I like 0.03 instead of 0.11
 
 /* Rainbow ********************************************************************/
 int pixelPosition = 0;
 int colorValue = 0;
 int pixelDirection = 0;
+int brightness = 10;  // 1 low, 10 max // brightness of the lights (pre dimmer)
 
 /* CGA ************************************************************************/
+int centerPixelPush = 14;	// magic number to push bottom row to make more centered
 int centerPixelT = stripT.numPixels()/2;
-int centerPixelB = map(centerPixelT,0,stripT.numPixels(),0,stripB.numPixels())+10;
+int centerPixelB = map(centerPixelT,0,stripT.numPixels(),0,stripB.numPixels())+centerPixelPush;
 int pixelPositionBL = centerPixelB;
 int pixelPositionBR = centerPixelB;
 int pixelPositionTL = centerPixelT;
 int pixelPositionTR = centerPixelT;
 
 /* AltCGA ************************************************************************/
-int pixelAltPositionBL = map(stripT.numPixels(),0,stripT.numPixels(),0,stripB.numPixels());
+int pixelAltPositionBL = map(stripT.numPixels(),0,stripT.numPixels(),0,stripB.numPixels())+centerPixelPush;
 int pixelAltPositionBR = 0;
 int pixelAltPositionTL = stripT.numPixels();
 int pixelAltPositionTR = 0;
+int centerPixelPushAlt = 8;	// magic number to push bottom row to make more centered
 
 /* ****************************************************************************/
 
@@ -168,6 +176,20 @@ void loop() {
 		Serial.print("Effect Toggle: ");
 		Serial.println(animationMode);
 	}
+	
+	/* Brightness pot */
+		/* read the potentiometer */
+		int dimReadingNew = analogRead(dimmingPin);
+		/* smooth potentiometer bouncing */
+		int dimReading = ((1 - potSmoothing) * dimReadingOld) + (potSmoothing * dimReadingNew);
+		dimReadingOld = dimReadingNew;
+		// convert pot to brightness level, with a little padding on each end
+		dimming = map(constrain(dimReading,10,980), 10, 980, 0, 255);
+		if (dimming == 0) {
+			digitalWrite(13,HIGH); // hey, light up something so we know we're on!
+		} else {
+			digitalWrite(13,LOW);
+		}
 	
 	if (animationMode == 0) {
 		/* Static Color, Set by Potentiometer */
@@ -280,6 +302,9 @@ void CgaCycle() {
 		stripB.setPixelColor(map(pixelPositionBR,0,stripT.numPixels(),0,stripB.numPixels())-group,255,255,255);
 		stripB.setPixelColor(map(pixelPositionBR,0,stripT.numPixels(),0,stripB.numPixels())+group,76,0,153);
 	}
+	stripT.setBrightness(dimming);
+	stripB.setBrightness(dimming);
+	controller.setBrightness(dimming);
 	stripT.show();
 	stripB.show();
 	controller.show();
@@ -312,34 +337,37 @@ void AltCycle() {
 	controller.setPixelColor(0,255,0,0);
 	controller.setPixelColor(1,255,0,0);
 	controller.setPixelColor(2,255,0,0);
-	controller.setPixelColor((pixelPosition % 20) -1,255,128,0);
+	controller.setPixelColor((pixelPosition % 20) -1,255,96,0);
 	controller.setPixelColor((pixelPosition % 20),255,255,0);
 	// move block forwards
-	stripT.setPixelColor(pixelAltPositionTL,255,128,0);
-	stripT.setPixelColor(pixelAltPositionTL+8,255,255,0);
-	for (int group = 1; group < 8; group++) {
-		stripT.setPixelColor(pixelAltPositionTL+group,255,128,0);
-		stripT.setPixelColor(pixelAltPositionTL-group,255,255,0);
+	stripT.setPixelColor(pixelAltPositionTL+12,255,255,96); // leading pixel T heading table right
+	stripT.setPixelColor(pixelAltPositionTL,255,85,33); // middle pixel T heading table right
+	for (int group = 2; group < 12; group++) {
+		stripT.setPixelColor(pixelAltPositionTL+group,255,96,0);  // leading group T heading table-right
+		stripT.setPixelColor(pixelAltPositionTL-group,255,85,0);   // tailing group T heading table-right
 	}
-	stripB.setPixelColor(map(pixelAltPositionBL,0,stripT.numPixels(),0,stripB.numPixels()),255,128,0);
-	stripB.setPixelColor(map(pixelAltPositionBL,0,stripT.numPixels(),0,stripB.numPixels())+8,255,255,0);
+	stripB.setPixelColor(map(pixelAltPositionBL,0,stripT.numPixels(),0,stripB.numPixels())+8+centerPixelPushAlt,255,255,96); // leading pixel B heading table right
+	stripB.setPixelColor(map(pixelAltPositionBL,0,stripT.numPixels(),0,stripB.numPixels())+centerPixelPushAlt,255,85,33);  // middle pixel B heading table right
 	for (int group = 1; group < 8; group++) {
-		stripB.setPixelColor(map(pixelAltPositionBL,0,stripT.numPixels(),0,stripB.numPixels())+group,255,128,0);
-		stripB.setPixelColor(map(pixelAltPositionBL,0,stripT.numPixels(),0,stripB.numPixels())-group,255,255,0);
+		stripB.setPixelColor(map(pixelAltPositionBL,0,stripT.numPixels(),0,stripB.numPixels())+group+centerPixelPushAlt,255,96,0); // leading group pixels B heading table right
+		stripB.setPixelColor(map(pixelAltPositionBL,0,stripT.numPixels(),0,stripB.numPixels())-group+centerPixelPushAlt,255,85,0); // tailing group B heading table right
 	}
 	// move block backwards
-	stripT.setPixelColor(pixelAltPositionTR,255,128,0);
-	stripT.setPixelColor(pixelAltPositionTR-8,255,255,0);
-	for (int group = 7; group > 0; group--) {
-		stripT.setPixelColor(pixelAltPositionTR-group,255,128,0);
-		stripT.setPixelColor(pixelAltPositionTR+group,255,128,0);
+	stripT.setPixelColor(pixelAltPositionTR-12,255,255,96); // leading pixel T heading table right
+	stripT.setPixelColor(pixelAltPositionTR,255,85,33); // middle pixel T heading table left
+	for (int group = 12; group > 1; group--) {
+		stripT.setPixelColor(pixelAltPositionTR-group,255,96,0); // leading group pixels T heading table left
+		stripT.setPixelColor(pixelAltPositionTR+group,255,85,0); // trailing group pixels T heading table left
 	}
-	stripB.setPixelColor(map(pixelAltPositionBR,0,stripT.numPixels(),0,stripB.numPixels()),255,128,0);
-	stripB.setPixelColor(map(pixelAltPositionBR,0,stripT.numPixels(),0,stripB.numPixels())-8,255,255,0);
-	for (int group = 7; group > 0; group--) {
-		stripB.setPixelColor(map(pixelAltPositionBR,0,stripT.numPixels(),0,stripB.numPixels())-group,255,128,0);
-		stripB.setPixelColor(map(pixelAltPositionBR,0,stripT.numPixels(),0,stripB.numPixels())+group,255,128,0);
+	stripB.setPixelColor(map(pixelAltPositionBR,0,stripT.numPixels(),0,stripB.numPixels())-8+centerPixelPushAlt,255,255,96); // leading pixel B heading table left
+	stripB.setPixelColor(map(pixelAltPositionBR,0,stripT.numPixels(),0,stripB.numPixels())+centerPixelPushAlt,255,85,33); // middle pixel B heading table left
+	for (int group = 7; group > 1; group--) {
+		stripB.setPixelColor(map(pixelAltPositionBR,0,stripT.numPixels(),0,stripB.numPixels())-group+centerPixelPushAlt,255,96,0); // leading group pixels B heading table left 
+		stripB.setPixelColor(map(pixelAltPositionBR,0,stripT.numPixels(),0,stripB.numPixels())+group+centerPixelPushAlt,255,85,0); // tailing group pixels B heading table left
 	}
+	stripT.setBrightness(dimming);
+	stripB.setBrightness(dimming);
+	controller.setBrightness(dimming);
 	stripT.show();
 	stripB.show();
 	controller.show();
@@ -354,7 +382,7 @@ void AltCycle() {
 	}
 	if (pixelAltPositionTR < 0) {
 		pixelAltPositionTR = stripT.numPixels();
-		pixelAltPositionBR = stripB.numPixels()+14;
+		pixelAltPositionBR = stripB.numPixels()+centerPixelPush;
 	}
 	if (pixelPosition > 255) {
 		pixelPosition = 0;
@@ -367,15 +395,15 @@ void Pacman() {
 		controller.setPixelColor(1,0,0,255);
 		controller.setPixelColor(2,255,165,0);
 		for (int pixel=0; pixel < stripT.numPixels(); pixel++) {
-			if (pixel == pixelPosition) {
+			if (pixel == pixelPosition) { // dot's white center
 				stripT.setPixelColor(pixel,255,255,255);
 				stripB.setPixelColor(map(pixel,0,stripT.numPixels(),0,stripB.numPixels()),255,255,255);
-			} else if (pixel == pixelPosition + 1 || pixel == pixelPosition -1) {
-				stripT.setPixelColor(pixel,255,255,8);
+			} else if (pixel == pixelPosition + 1 || pixel == pixelPosition -1) { // dot's orange middle ring
+				stripT.setPixelColor(pixel,255,255,8); 
 				stripB.setPixelColor(map(pixel,0,stripT.numPixels(),0,stripB.numPixels()),255,255,8);
-			} else if (pixel == pixelPosition +2 || pixel == pixelPosition - 2) {
+			} else if (pixel == pixelPosition +2 || pixel == pixelPosition - 2) { // dot's outter ring
 				stripT.setPixelColor(pixel,165,165,0);
-				stripB.setPixelColor(map(pixel,0,stripT.numPixels(),0,stripB.numPixels()),165,165,0);
+				stripB.setPixelColor(map(pixel,0,stripT.numPixels(),0,stripB.numPixels()),255,196,0);
 			} else if ( (pixel == pixelPosition + 20) || (pixel == pixelPosition - 20) ) {
 				stripT.setPixelColor(pixel,70,30,180);
 				stripB.setPixelColor(map(pixel,0,stripT.numPixels(),0,stripB.numPixels()),70,30,180);
@@ -401,7 +429,7 @@ void Pacman() {
 				stripB.setPixelColor(map(pixel,0,stripT.numPixels(),0,stripB.numPixels()),255,255,8);
 			} else if (pixel == pixelPosition + 2 || pixel == pixelPosition -2) {
 				stripT.setPixelColor(pixel,165,165,0);
-				stripB.setPixelColor(map(pixel,0,stripT.numPixels(),0,stripB.numPixels()),165,165,0);
+				stripB.setPixelColor(map(pixel,0,stripT.numPixels(),0,stripB.numPixels()),255,196,0);
 			} else if ( (pixel == pixelPosition + 20) || (pixel == pixelPosition - 20) ) {
 				stripT.setPixelColor(pixel,70,130,180);
 				stripB.setPixelColor(map(pixel,0,stripT.numPixels(),0,stripB.numPixels()),70,130,180);
@@ -415,6 +443,9 @@ void Pacman() {
 		}
 		pixelPosition--;
 	}		
+	stripT.setBrightness(dimming);
+	stripB.setBrightness(dimming);
+	controller.setBrightness(dimming);
 	stripT.show();
 	stripB.show();
 	controller.show();
@@ -450,6 +481,9 @@ void Sparkle(int color) {
 		stripT.setPixelColor(pixel, Wheel(displayColor, displayFade));
 		stripB.setPixelColor(pixel, Wheel(displayColor, displayFade));
 	}
+	stripT.setBrightness(dimming);
+	stripB.setBrightness(dimming);
+	controller.setBrightness(dimming);
 	stripT.show();
 	stripB.show();
 }
@@ -466,6 +500,9 @@ void RainbowCycle() {
 	controller.setPixelColor(0, Wheel((colorValue+10), displayFade));
 	controller.setPixelColor(1, Wheel((colorValue+20), displayFade));
 	controller.setPixelColor(2, Wheel((colorValue+30), displayFade));
+	stripT.setBrightness(dimming);
+	stripB.setBrightness(dimming);
+	controller.setBrightness(dimming);
 	stripT.show();
 	stripB.show();
 	controller.show();
@@ -529,6 +566,8 @@ void PlasmaStrip () {
 			}
 		}
 	}
+	stripT.setBrightness(dimming);
+	stripB.setBrightness(dimming);
 	stripT.show();
 	stripB.show();
 }
@@ -583,6 +622,48 @@ void PlasmaController () {
 			controller.setPixelColor(col + (3 * row), controller.Color(color_1, color_2, color_3));
 		}
 	}
+	controller.setBrightness(dimming);
 	controller.show();
+}
+
+/*
+ 	for (pixelPosition = 0; pixelPosition <= stripT.numPixels(); pixelPosition++) {
+ 		//int pixelColor = map(colorValue+pixelPosition,0,(stripT.numPixels() + 255),0,stripT.numPixels());
+		//int pixelColor = ((colorValue * 256 / stripT.numPixels()) + pixelPosition);
+		int pixelColor = (colorValue + pixelPosition);
+		stripT.setPixelColor(pixelPosition, Wheel(pixelColor,displayFade));
+		stripB.setPixelColor(pixelPosition, Wheel(pixelColor,displayFade));
+		//Serial.println(pixelColor);
+	}
+	controller.setPixelColor(0, Wheel((colorValue+10), displayFade));
+	controller.setPixelColor(1, Wheel((colorValue+20), displayFade));
+	controller.setPixelColor(2, Wheel((colorValue+30), displayFade));
+	stripT.show();
+	stripB.show();
+	controller.show();
+	colorValue++;
+	if (colorValue == 256) {
+		colorValue = 0;
+	}
+*/
+
+void theaterChaseRainbow() {
+  for (int j=0; j < 256; j++) {     // cycle all 256 colors in the wheel
+    for (int q=0; q < 3; q++) {
+      for (uint16_t i=0; i < stripT.numPixels(); i=i+3) {
+        stripT.setPixelColor(i+q, Wheel( (i+j) % 255, displayFade));    //turn every third pixel on
+        stripB.setPixelColor(i+q, Wheel( (i+j) % 255, displayFade));
+      }
+      stripT.setBrightness(dimming);
+      stripB.setBrightness(dimming);
+      stripT.show();
+	  stripB.show();
+
+      for (uint16_t i=0; i < stripT.numPixels(); i=i+3) {
+        stripT.setPixelColor(i+q, 0);        //turn every third pixel off
+        stripB.setPixelColor(i+q, 0);
+      }
+    }
+  }
 }
 
